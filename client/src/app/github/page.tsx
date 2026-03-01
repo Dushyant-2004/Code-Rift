@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import RepoTree from "@/components/RepoTree";
-import ResultsPanel from "@/components/ResultsPanel";
+import GitHubResultsPanel from "@/components/GitHubResultsPanel";
 import MagneticButton from "@/components/MagneticButton";
 import toast from "react-hot-toast";
 import { useSearchParams } from "next/navigation";
@@ -508,9 +508,10 @@ export default function GitHubPage() {
                             Results cover the first portion.
                           </div>
                         )}
-                        <ResultsPanel
+                        <GitHubResultsPanel
                           result={analysisResult}
                           onClose={handleCloseResults}
+                          fileName={selectedFile || undefined}
                         />
                       </motion.div>
                     )}
