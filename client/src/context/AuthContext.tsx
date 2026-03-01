@@ -36,25 +36,21 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [user, setUser] = useState<AppUser | null>(() => {
-    // Hydrate from cached user for instant display
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("coderift_user");
-        return cached ? JSON.parse(cached) : null;
-      } catch {
-        return null;
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Hydrate cached user on mount (client-only) to avoid hydration mismatch
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem("coderift_user");
+      if (cached) {
+        setUser(JSON.parse(cached));
+        setLoading(false);
       }
+    } catch {
+      // ignore corrupt cache
     }
-    return null;
-  });
-  const [loading, setLoading] = useState(() => {
-    // If we have a cached user, skip the loading state
-    if (typeof window !== "undefined" && localStorage.getItem("coderift_user")) {
-      return false;
-    }
-    return true;
-  });
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {

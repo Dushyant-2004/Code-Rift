@@ -8,6 +8,7 @@ const { connectRedis } = require("./config/redis");
 const authRoutes = require("./routes/auth");
 const reviewRoutes = require("./routes/review");
 const dashboardRoutes = require("./routes/dashboard");
+const githubRoutes = require("./routes/github");
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(morgan("dev"));
 app.use("/api/auth", authRoutes);
 app.use("/api/review", reviewRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/github", githubRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

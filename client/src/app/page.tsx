@@ -52,29 +52,51 @@ function useTypingEffect(words: string[], typingSpeed = 80, deletingSpeed = 50, 
   return text;
 }
 
-/* ── Floating particles ── */
+/* ── Deterministic seed for particle positions (avoids hydration mismatch) ── */
+function seededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
+  ix: seededRandom(i * 6 + 1) * 100,
+  iy: seededRandom(i * 6 + 2) * 100,
+  ay1: seededRandom(i * 6 + 3) * 100,
+  ay2: seededRandom(i * 6 + 4) * 100,
+  ax1: seededRandom(i * 6 + 5) * 100,
+  ax2: seededRandom(i * 6 + 6) * 100,
+  duration: (seededRandom(i * 7) * 8) + 6,
+  delay: seededRandom(i * 9) * 4,
+}));
+
+/* ── Floating particles (client-only) ── */
 function FloatingParticles() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!mounted) return null;
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {Array.from({ length: 20 }).map((_, i) => (
+      {PARTICLES.map((p, i) => (
         <motion.div
           key={i}
           className="absolute w-1 h-1 bg-brand-400/30 rounded-full"
           initial={{
-            x: `${Math.random() * 100}%`,
-            y: `${Math.random() * 100}%`,
+            x: `${p.ix}%`,
+            y: `${p.iy}%`,
             opacity: 0,
           }}
           animate={{
-            y: [`${Math.random() * 100}%`, `${Math.random() * 100}%`],
-            x: [`${Math.random() * 100}%`, `${Math.random() * 100}%`],
+            y: [`${p.ay1}%`, `${p.ay2}%`],
+            x: [`${p.ax1}%`, `${p.ax2}%`],
             opacity: [0, 0.6, 0],
           }}
           transition={{
-            duration: Math.random() * 8 + 6,
+            duration: p.duration,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: Math.random() * 4,
+            delay: p.delay,
           }}
         />
       ))}

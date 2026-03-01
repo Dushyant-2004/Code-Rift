@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePathname } from "next/navigation";
 import {
   Code2,
+  Github,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -21,6 +22,7 @@ export default function Navbar() {
 
   const links = [
     { href: "/review", label: "Review", icon: Code2 },
+    { href: "/github", label: "GitHub", icon: Github },
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   ];
 

@@ -131,4 +131,98 @@ async function analyzeCode(code, language) {
   }
 }
 
-module.exports = { analyzeCode };
+function buildRepoPrompt(repoName, treeStructure, keyFiles, subPath) {
+  const scope = subPath ? `the "${subPath}" folder of` : "";
+  const fileContents = keyFiles
+    .map((f) => `--- ${f.path} ---\n${f.content}`)
+    .join("\n\n");
+
+  return `You are an expert software architect and code reviewer. Analyze ${scope} the GitHub repository "${repoName}".
+
+Below is the file/folder tree and the contents of key files.
+
+FILE TREE:
+${treeStructure}
+
+KEY FILE CONTENTS:
+${fileContents}
+
+Return your response as a valid JSON object with EXACTLY this structure (no markdown, no code fences, pure JSON only):
+
+{
+  "summary": "A clear 2-4 sentence introduction explaining what this repo/folder does and its purpose",
+  "techStack": ["list of technologies, frameworks, and languages detected"],
+  "architecture": "A paragraph describing the project architecture, how folders are organized, and how components relate",
+  "entryPoints": ["list of main entry point files and what they do"],
+  "strengths": ["list of things done well in the project structure"],
+  "suggestions": [
+    {
+      "title": "Short actionable title",
+      "description": "Detailed explanation of the suggestion",
+      "priority": "<high|medium|low>"
+    }
+  ],
+  "score": <number 0-100 representing overall project quality>,
+  "overallRating": "<Excellent|Good|Average|Below Average|Poor>"
+}
+
+Rules:
+- Be specific and reference actual file/folder names from the tree
+- Provide actionable, practical suggestions
+- Detect the tech stack from package.json, requirements.txt, config files, etc.
+- If this is a subfolder, focus your analysis on that scope
+- Return ONLY valid JSON, no additional text`;
+}
+
+async function analyzeRepo(repoName, treeStructure, keyFiles, subPath = "") {
+  const prompt = buildRepoPrompt(repoName, treeStructure, keyFiles, subPath);
+
+  const completion = await groq.chat.completions.create({
+    model: "llama-3.1-8b-instant",
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a software architecture expert. Always respond with valid JSON only. No markdown formatting, no code fences, no explanatory text outside the JSON.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    temperature: 0.3,
+    max_tokens: 4096,
+    response_format: { type: "json_object" },
+  });
+
+  const raw = completion.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("Empty response from Groq API");
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+
+    return {
+      summary: parsed.summary || "Analysis complete.",
+      techStack: Array.isArray(parsed.techStack) ? parsed.techStack : [],
+      architecture: parsed.architecture || "",
+      entryPoints: Array.isArray(parsed.entryPoints) ? parsed.entryPoints : [],
+      strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+      suggestions: Array.isArray(parsed.suggestions)
+        ? parsed.suggestions.map((s) => ({
+            title: s.title || "Suggestion",
+            description: s.description || "",
+            priority: ["high", "medium", "low"].includes(s.priority) ? s.priority : "medium",
+          }))
+        : [],
+      score: Math.min(100, Math.max(0, parseInt(parsed.score) || 50)),
+      overallRating: parsed.overallRating || "Average",
+    };
+  } catch (parseErr) {
+    console.error("Failed to parse Groq repo analysis response:", raw);
+    throw new Error("Failed to parse AI response for repo analysis");
+  }
+}
+
+module.exports = { analyzeCode, analyzeRepo };

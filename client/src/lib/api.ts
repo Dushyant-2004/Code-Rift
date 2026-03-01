@@ -2,9 +2,26 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 async function getToken(): Promise<string | null> {
   const { auth } = await import("./firebase");
-  const user = auth.currentUser;
-  if (!user) return null;
-  return user.getIdToken();
+  const { onAuthStateChanged } = await import("firebase/auth");
+
+  // If currentUser is already available, use it directly
+  if (auth.currentUser) {
+    return auth.currentUser.getIdToken();
+  }
+
+  // Otherwise wait for Firebase auth to resolve (first load / page refresh)
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve(null), 5000); // 5s safety timeout
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      clearTimeout(timeout);
+      unsubscribe();
+      if (user) {
+        user.getIdToken().then(resolve).catch(() => resolve(null));
+      } else {
+        resolve(null);
+      }
+    });
+  });
 }
 
 async function apiRequest(endpoint: string, options: RequestInit = {}) {
@@ -52,4 +69,26 @@ export const api = {
   },
   getStats: () => apiRequest("/dashboard/stats"),
   getLanguages: () => apiRequest("/dashboard/languages"),
+
+  // GitHub
+  getGitHubAuthUrl: () => apiRequest("/github/auth-url"),
+  getGitHubStatus: () => apiRequest("/github/status"),
+  disconnectGitHub: () => apiRequest("/github/disconnect", { method: "POST" }),
+  getGitHubRepos: (params: Record<string, string | number> = {}) => {
+    const query = new URLSearchParams(
+      Object.entries(params).map(([k, v]) => [k, String(v)])
+    ).toString();
+    return apiRequest(`/github/repos?${query}`);
+  },
+  getRepoTree: (owner: string, repo: string, branch?: string) => {
+    const query = branch ? `?branch=${branch}` : "";
+    return apiRequest(`/github/repos/${owner}/${repo}/tree${query}`);
+  },
+  getGitHubFileContent: (owner: string, repo: string, path: string) =>
+    apiRequest(`/github/repos/${owner}/${repo}/file?path=${encodeURIComponent(path)}`),
+  analyzeGitHubFile: (owner: string, repo: string, path: string, branch?: string) =>
+    apiRequest("/github/analyze", {
+      method: "POST",
+      body: JSON.stringify({ owner, repo, path, branch }),
+    }),
 };
