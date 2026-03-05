@@ -1,5 +1,3 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-
 async function getToken(): Promise<string | null> {
   const { auth } = await import("./firebase");
   const { onAuthStateChanged } = await import("firebase/auth");
@@ -34,7 +32,7 @@ async function apiRequest(endpoint: string, options: RequestInit = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}${endpoint}`, {
+  const res = await fetch(`/api${endpoint}`, {
     ...options,
     headers,
   });
