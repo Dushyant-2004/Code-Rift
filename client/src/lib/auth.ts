@@ -1,4 +1,4 @@
-import admin from "@/lib/firebaseAdmin";
+import getFirebaseAdmin from "@/lib/firebaseAdmin";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import { NextResponse } from "next/server";
@@ -23,6 +23,7 @@ export async function authenticate(
     }
 
     const token = authHeader.split("Bearer ")[1];
+    const admin = getFirebaseAdmin();
     const decoded = await admin.auth().verifyIdToken(token);
 
     await connectDB();
