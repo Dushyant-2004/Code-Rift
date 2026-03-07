@@ -39,7 +39,11 @@ export async function authenticate(
     }
 
     return { user: user.toObject() as unknown as AuthenticatedUser };
-  } catch {
-    return { error: NextResponse.json({ error: "Invalid or expired token" }, { status: 401 }) };
+  } catch (err: any) {
+    console.error("[Auth] authenticate error:", err.message || err);
+    const message = err.message?.includes("credentials not configured")
+      ? err.message
+      : "Invalid or expired token";
+    return { error: NextResponse.json({ error: message }, { status: 401 }) };
   }
 }
